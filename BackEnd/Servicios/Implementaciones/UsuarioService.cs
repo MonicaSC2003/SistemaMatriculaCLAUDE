@@ -35,7 +35,11 @@ namespace BackEnd.Servicios.Implementaciones
         {
             try
             {
-                var usuarios = _unidadDeTrabajo.UsuarioDAL.GetUsuariosByRolYCarrera(rol, carrera);
+                var todosLosUsuarios = _unidadDeTrabajo.UsuarioDAL.Get();
+                var usuarios = todosLosUsuarios
+                    .Where(u => u.Rol == rol && u.Carrera == carrera)
+                    .ToList();
+
                 var usuariosDTO = usuarios.Select(u => ConvertToDTO(u)).ToList();
                 return usuariosDTO;
             }
@@ -49,15 +53,15 @@ namespace BackEnd.Servicios.Implementaciones
         {
             try
             {
-                var usuario = _unidadDeTrabajo.UsuarioDAL.GetUsuarioPorId(id);
+                var usuario = _unidadDeTrabajo.UsuarioDAL.FindById(id);
                 if (usuario == null)
                     return null;
 
                 return ConvertToDTO(usuario);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new Exception($"Error en GetUsuarioPorId: {ex.Message}", ex);
             }
         }
 
@@ -66,14 +70,11 @@ namespace BackEnd.Servicios.Implementaciones
         {
             try
             {
-                // Validar que el correo no exista ya
                 var usuariosExistentes = _unidadDeTrabajo.UsuarioDAL.Get();
                 if (usuariosExistentes.Any(u => u.Correo.ToLower() == usuarioDTO.Correo.ToLower()))
                 {
                     throw new Exception("El correo ya está registrado");
                 }
-
-                // Validar que la identificación no exista ya
                 if (usuariosExistentes.Any(u => u.Identificacion == usuarioDTO.Identificacion))
                 {
                     throw new Exception("La identificación ya está registrada");
@@ -81,9 +82,7 @@ namespace BackEnd.Servicios.Implementaciones
 
                 var usuario = ConvertToEntity(usuarioDTO);
                 usuario.CreatedAt = DateTime.Now;
-                usuario.Activo = false; // Por defecto el usuario se crea inactivo
-
-                // Si no se proporciona número de verificación, generar uno
+                usuario.Activo = false;
                 if (!usuario.NumeroVerificacion.HasValue || usuario.NumeroVerificacion.Value == 0)
                 {
                     Random random = new Random();
@@ -94,8 +93,6 @@ namespace BackEnd.Servicios.Implementaciones
                 if (resultado)
                 {
                     _unidadDeTrabajo.Complete();
-
-                    // Re-buscar el usuario para obtener el ID generado
                     var usuarioCreado = _unidadDeTrabajo.UsuarioDAL.Get()
                         .FirstOrDefault(u => u.Correo == usuario.Correo);
 
@@ -113,7 +110,6 @@ namespace BackEnd.Servicios.Implementaciones
             }
             catch (Exception ex)
             {
-                // Log the exception (you might want to use ILogger here)
                 throw new Exception($"Error al crear usuario: {ex.Message}", ex);
             }
         }

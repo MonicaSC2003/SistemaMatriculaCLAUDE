@@ -91,7 +91,6 @@ namespace BackEnd.Controllers
             }
             catch (Exception ex)
             {
-                // Return the actual error message for debugging
                 return StatusCode(500, new
                 {
                     error = "Error al crear usuario",
